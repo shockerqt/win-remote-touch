@@ -5,38 +5,26 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
-use std::mem::zeroed;
+use std::mem::{size_of, zeroed};
 use tokio::net::TcpListener;
-use windows_sys::Win32::Foundation::{POINT, RECT};
-use windows_sys::Win32::UI::Input::Pointer::{
-    InitializeTouchInjection, InjectTouchInput, POINTER_FLAG_DOWN, POINTER_FLAG_INCONTACT,
-    POINTER_FLAG_INRANGE, POINTER_FLAG_UP, POINTER_FLAG_UPDATE, POINTER_INFO, POINTER_TOUCH_INFO,
-    TOUCH_FEEDBACK_DEFAULT,
-};
-use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, PT_TOUCH, SM_CXSCREEN, SM_CYSCREEN, TOUCH_FLAG_NONE, TOUCH_MASK_CONTACTAREA,
-    TOUCH_MASK_PRESSURE,
+
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_MOUSE, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+    MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MOVE, MOUSEEVENTF_RIGHTDOWN,
+    MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL,
 };
 
 #[derive(Deserialize, Debug)]
-struct TouchEvent {
-    id: u32,
-    x: f32,
-    y: f32,
-    action: String,
+#[serde(tag = "action")]
+enum TouchpadEvent {
+    MOVE { dx: f32, dy: f32 },
+    SCROLL { dy: f32 },
+    CLICK { button: String },
 }
 
 #[tokio::main]
 async fn main() {
-    println!("Inicializando inyección táctil de Windows...");
-    unsafe {
-        let init_result = InitializeTouchInjection(10, TOUCH_FEEDBACK_DEFAULT);
-        if init_result == 0 {
-            println!("Nota: Error al inicializar InitializeTouchInjection. (Ignorar si se ejecuta en Linux para pruebas de compilación)");
-        } else {
-            println!("API Táctil Inicializada para 10 dedos.");
-        }
-    }
+    println!("Inicializando Servidor de Touchpad Remoto...");
 
     let app = Router::new()
         .route("/", get(index_handler))
@@ -59,54 +47,58 @@ async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
 async fn handle_socket(mut socket: WebSocket) {
     while let Some(Ok(msg)) = socket.recv().await {
         if let Message::Text(text) = msg {
-            if let Ok(event) = serde_json::from_str::<TouchEvent>(&text) {
-                inject_touch_event(&event);
+            if let Ok(event) = serde_json::from_str::<TouchpadEvent>(&text) {
+                process_event(&event);
             }
         }
     }
 }
 
-fn inject_touch_event(event: &TouchEvent) {
+fn process_event(event: &TouchpadEvent) {
     unsafe {
-        let mut pointer_info: POINTER_INFO = zeroed();
-        pointer_info.pointerType = PT_TOUCH;
-        pointer_info.pointerId = event.id;
+        match event {
+            TouchpadEvent::MOVE { dx, dy } => {
+                let mut input: INPUT = zeroed();
+                input.r#type = INPUT_MOUSE;
 
-        // Fase 4: Escalado desde coordenadas relativas a la resolución real de la pantalla
-        let screen_width = GetSystemMetrics(SM_CXSCREEN) as f32;
-        let screen_height = GetSystemMetrics(SM_CYSCREEN) as f32;
+                // Accelerate movement slightly for better touchpad feel
+                let accel = 1.5;
+                input.Anonymous.mi.dx = (*dx * accel) as i32;
+                input.Anonymous.mi.dy = (*dy * accel) as i32;
+                input.Anonymous.mi.dwFlags = MOUSEEVENTF_MOVE;
 
-        let mapped_x = (event.x * screen_width) as i32;
-        let mapped_y = (event.y * screen_height) as i32;
+                SendInput(1, &input, size_of::<INPUT>() as i32);
+            }
+            TouchpadEvent::SCROLL { dy } => {
+                let mut input: INPUT = zeroed();
+                input.r#type = INPUT_MOUSE;
 
-        pointer_info.ptPixelLocation = POINT {
-            x: mapped_x,
-            y: mapped_y,
-        };
+                // Windows WHEEL_DELTA is 120. A JS swipe up gives a negative dy.
+                // Scroll down in Windows expects a negative mouseData.
+                let scroll_amount = (*dy * -2.0) as i32; // invert and scale
+                input.Anonymous.mi.mouseData = scroll_amount as u32;
+                input.Anonymous.mi.dwFlags = MOUSEEVENTF_WHEEL;
 
-        let flags = match event.action.as_str() {
-            "DOWN" => POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT,
-            "MOVE" => POINTER_FLAG_UPDATE | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT,
-            "UP" => POINTER_FLAG_UP,
-            _ => 0,
-        };
-        pointer_info.pointerFlags = flags;
+                SendInput(1, &input, size_of::<INPUT>() as i32);
+            }
+            TouchpadEvent::CLICK { button } => {
+                let (down, up) = match button.as_str() {
+                    "LEFT" => (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP),
+                    "RIGHT" => (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP),
+                    "MIDDLE" => (MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_MIDDLEUP),
+                    _ => return,
+                };
 
-        let mut touch_info: POINTER_TOUCH_INFO = zeroed();
-        touch_info.pointerInfo = pointer_info;
-        touch_info.touchFlags = TOUCH_FLAG_NONE;
-        touch_info.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
+                let mut inputs: [INPUT; 2] = [zeroed(), zeroed()];
 
-        let cx = mapped_x;
-        let cy = mapped_y;
-        touch_info.rcContact = RECT {
-            left: cx - 10,
-            top: cy - 10,
-            right: cx + 10,
-            bottom: cy + 10,
-        };
-        touch_info.pressure = 1024;
+                inputs[0].r#type = INPUT_MOUSE;
+                inputs[0].Anonymous.mi.dwFlags = down;
 
-        InjectTouchInput(1, &touch_info);
+                inputs[1].r#type = INPUT_MOUSE;
+                inputs[1].Anonymous.mi.dwFlags = up;
+
+                SendInput(2, inputs.as_ptr(), size_of::<INPUT>() as i32);
+            }
+        }
     }
 }

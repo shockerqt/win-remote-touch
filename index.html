@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Remote Touch</title>
+    <title>Remote Touchpad</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -115,33 +115,10 @@
             font-size: 12px;
             font-weight: 500;
             letter-spacing: 1px;
+            text-align: center;
+            line-height: 1.6;
         }
 
-        .ripple {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            margin-left: -40px;
-            margin-top: -40px;
-            background: radial-gradient(circle, rgba(99,102,241,0.6) 0%, rgba(99,102,241,0) 70%);
-            border-radius: 50%;
-            transform: scale(0);
-            animation: ripple-anim 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
-            pointer-events: none;
-        }
-
-        @keyframes ripple-anim {
-            0% {
-                transform: scale(0);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(3);
-                opacity: 0;
-            }
-        }
-        
-        /* Grid background for technical feel */
         .grid-overlay {
             position: absolute;
             top: 0;
@@ -154,6 +131,24 @@
             pointer-events: none;
             z-index: 1;
         }
+        
+        .ripple {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            margin-left: -40px;
+            margin-top: -40px;
+            background: radial-gradient(circle, rgba(99,102,241,0.6) 0%, rgba(99,102,241,0) 70%);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple-anim 0.4s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-anim {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -164,8 +159,12 @@
     </div>
 
     <div class="title-container">
-        <div class="title">Remote Touch</div>
-        <div class="subtitle">TAP OR SWIPE TO CONTROL</div>
+        <div class="title">Touchpad</div>
+        <div class="subtitle">
+            1 Finger: Move &middot; Tap: Left Click<br>
+            2 Fingers: Scroll &middot; Tap: Right Click<br>
+            3 Fingers: Tap: Middle Click
+        </div>
     </div>
 
     <div id="touch-area"></div>
@@ -175,72 +174,122 @@
             const statusBadge = document.getElementById('status');
             const touchArea = document.getElementById('touch-area');
             
-            // Initialize WebSocket
             let ws;
             function connect() {
                 ws = new WebSocket(`ws://${location.host}/ws`);
-
                 ws.onopen = () => {
                     statusBadge.textContent = 'Connected';
                     statusBadge.className = 'status connected';
                 };
-
                 ws.onclose = () => {
                     statusBadge.textContent = 'Disconnected';
                     statusBadge.className = 'status disconnected';
-                    // Attempt to reconnect after 2 seconds
                     setTimeout(connect, 2000);
                 };
-
                 ws.onerror = (err) => {
                     console.error('WebSocket Error:', err);
                     ws.close();
                 };
             }
-            
             connect();
 
+            function sendPayload(payload) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(payload));
+                }
+            }
+            
             function createRipple(x, y) {
                 const ripple = document.createElement('div');
                 ripple.className = 'ripple';
                 ripple.style.left = `${x}px`;
                 ripple.style.top = `${y}px`;
                 document.body.appendChild(ripple);
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 800);
+                setTimeout(() => ripple.remove(), 400);
             }
 
-            function sendTouch(action, e) {
+            // Tracking state
+            let previousTouches = {};
+            let touchStartTime = 0;
+            let maxFingers = 0;
+            let hasMoved = false;
+
+            touchArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                touchStartTime = Date.now();
+                hasMoved = false;
+                maxFingers = Math.max(maxFingers, e.touches.length);
                 
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    
-                    if (action === 'DOWN') {
-                        createRipple(touch.clientX, touch.clientY);
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    previousTouches[touch.identifier] = { x: touch.clientX, y: touch.clientY };
+                }
+            }, { passive: false });
+
+            touchArea.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                hasMoved = true;
+                
+                if (e.touches.length === 1) {
+                    // 1 Finger: Mouse Move
+                    const touch = e.touches[0];
+                    const prev = previousTouches[touch.identifier];
+                    if (prev) {
+                        const dx = touch.clientX - prev.x;
+                        const dy = touch.clientY - prev.y;
+                        sendPayload({ action: "MOVE", dx: dx, dy: dy });
                     }
-                    
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        const payload = {
-                            id: touch.identifier,
-                            x: touch.clientX / window.innerWidth,
-                            y: touch.clientY / window.innerHeight,
-                            action: action
-                        };
-                        ws.send(JSON.stringify(payload));
+                    previousTouches[touch.identifier] = { x: touch.clientX, y: touch.clientY };
+                } 
+                else if (e.touches.length === 2) {
+                    // 2 Fingers: Scroll (We just track the first finger's delta for simplicity)
+                    const touch = e.touches[0];
+                    const prev = previousTouches[touch.identifier];
+                    if (prev) {
+                        const dy = touch.clientY - prev.y;
+                        sendPayload({ action: "SCROLL", dx: 0, dy: dy });
+                    }
+                    // Update all touches
+                    for (let i = 0; i < e.touches.length; i++) {
+                        const t = e.touches[i];
+                        previousTouches[t.identifier] = { x: t.clientX, y: t.clientY };
                     }
                 }
-            }
+            }, { passive: false });
 
-            // Passive must be false to allow preventDefault
-            const options = { passive: false };
+            touchArea.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                
+                // If it was a quick tap without much movement
+                const duration = Date.now() - touchStartTime;
+                if (e.touches.length === 0 && !hasMoved && duration < 300) {
+                    // Visual feedback
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        createRipple(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+                    }
+                    
+                    if (maxFingers === 1) {
+                        sendPayload({ action: "CLICK", button: "LEFT" });
+                    } else if (maxFingers === 2) {
+                        sendPayload({ action: "CLICK", button: "RIGHT" });
+                    } else if (maxFingers === 3) {
+                        sendPayload({ action: "CLICK", button: "MIDDLE" });
+                    }
+                }
+                
+                if (e.touches.length === 0) {
+                    maxFingers = 0;
+                    previousTouches = {};
+                }
+            }, { passive: false });
             
-            touchArea.addEventListener('touchstart', (e) => sendTouch('DOWN', e), options);
-            touchArea.addEventListener('touchmove', (e) => sendTouch('MOVE', e), options);
-            touchArea.addEventListener('touchend', (e) => sendTouch('UP', e), options);
-            touchArea.addEventListener('touchcancel', (e) => sendTouch('UP', e), options);
+            touchArea.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 0) {
+                    maxFingers = 0;
+                    previousTouches = {};
+                }
+            }, { passive: false });
         });
     </script>
 </body>
