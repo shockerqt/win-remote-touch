@@ -535,6 +535,7 @@
             let lastTapPos = { x: 0, y: 0 };
             let isDragCandidate = false;
             let isDragging = false;
+            let dragStartPos = { x: 0, y: 0 };
 
             // Scroll / Zoom State
             let gestureMode = null; // 'scroll' | 'zoom' | 'swipe' | null
@@ -625,12 +626,13 @@
                     );
                     if (now - lastTapTime < 300 && dist < 20) {
                         isDragCandidate = true;
+                        dragStartPos = { x: touch.clientX, y: touch.clientY };
                     } else {
                         isDragCandidate = false;
                     }
                 } else {
                     if (isDragging) {
-                        sendPayload({ action: "DRAG_END" });
+                        sendPayload({ action: "DRAGEND" });
                         isDragging = false;
                     }
                     isDragCandidate = false;
@@ -707,12 +709,15 @@
                         const dy = touch.clientY - prev.y;
                         if (dx !== 0 || dy !== 0) {
                             if (isDragCandidate) {
-                                if (!isDragging) {
-                                    isDragging = true;
-                                    sendPayload({ action: "DRAG_START" });
-                                    showIndicator("Drag");
+                                const dragDist = Math.hypot(touch.clientX - dragStartPos.x, touch.clientY - dragStartPos.y);
+                                if (dragDist > 10) {
+                                    if (!isDragging) {
+                                        isDragging = true;
+                                        sendPayload({ action: "DRAGSTART" });
+                                        showIndicator("Drag");
+                                    }
+                                    sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                                 }
-                                sendPayload({ action: "DRAG_MOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                             } else {
                                 sendPayload({ action: "MOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                             }
@@ -804,9 +809,10 @@
                 const wasTap = e.touches.length === 0 && maxMoveDistance < tapDeadzone && duration < tapDuration;
 
                 if (isDragging) {
-                    sendPayload({ action: "DRAG_END" });
+                    sendPayload({ action: "DRAGEND" });
                     isDragging = false;
                     isDragCandidate = false;
+                    lastTapTime = 0; // Evitar double tap involuntario tras soltar arrastre
                 }
                 else if (wasTap) {
                     // Visual feedback
@@ -891,7 +897,7 @@
                     fourFingerTimer = null;
                 }
                 if (isDragging) {
-                    sendPayload({ action: "DRAG_END" });
+                    sendPayload({ action: "DRAGEND" });
                     isDragging = false;
                 }
                 if (e.touches.length === 0) {
