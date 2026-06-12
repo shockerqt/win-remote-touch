@@ -708,17 +708,16 @@
                         const dx = touch.clientX - prev.x;
                         const dy = touch.clientY - prev.y;
                         if (dx !== 0 || dy !== 0) {
-                            if (isDragCandidate) {
+                            if (isDragging) {
+                                sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
+                            } else if (isDragCandidate) {
                                 const dragDist = Math.hypot(touch.clientX - dragStartPos.x, touch.clientY - dragStartPos.y);
                                 // Threshold reduced to 5px for more responsive drag initiation
                                 if (dragDist > 5) {
-                                    if (!isDragging) {
-                                        isDragging = true;
-                                        isDragCandidate = false; // Confirm drag, no longer a candidate
-                                        sendPayload({ action: "DRAGSTART" });
-                                        showIndicator("Drag");
-                                        triggerHaptic(15);
-                                    }
+                                    isDragging = true;
+                                    sendPayload({ action: "DRAGSTART" });
+                                    showIndicator("Drag");
+                                    triggerHaptic(15);
                                     sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                                 }
                                 // Within the 5px dead zone: don't send MOVE (cursor stays still

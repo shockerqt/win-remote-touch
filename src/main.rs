@@ -82,7 +82,7 @@ async fn handle_socket(mut socket: WebSocket) {
         if let Message::Text(text) = msg {
             if let Ok(event) = serde_json::from_str::<TouchpadEvent>(&text) {
                 println!("Acción recibida: {:?}", event);
-                process_event(&mut state, &event);
+                process_event(&mut state, &event).await;
             }
         }
     }
@@ -153,7 +153,7 @@ unsafe fn send_shortcut(mods: &[u16], key: u16) {
     );
 }
 
-fn process_event(state: &mut SessionState, event: &TouchpadEvent) {
+async fn process_event(state: &mut SessionState, event: &TouchpadEvent) {
     unsafe {
         match event {
             TouchpadEvent::Move { dx, dy } => {
@@ -164,6 +164,7 @@ fn process_event(state: &mut SessionState, event: &TouchpadEvent) {
                 input.r#type = INPUT_MOUSE;
                 input.Anonymous.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
                 SendInput(1, &input, size_of::<INPUT>() as i32);
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
             TouchpadEvent::DragMove { dx, dy } => {
                 move_mouse(*dx, *dy, state.cursor_speed);
