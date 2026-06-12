@@ -48,6 +48,7 @@ async fn handle_socket(mut socket: WebSocket) {
     while let Some(Ok(msg)) = socket.recv().await {
         if let Message::Text(text) = msg {
             if let Ok(event) = serde_json::from_str::<TouchpadEvent>(&text) {
+                println!("Acción recibida: {:?}", event);
                 process_event(&event);
             }
         }
