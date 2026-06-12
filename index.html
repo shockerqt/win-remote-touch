@@ -533,9 +533,9 @@
             // Drag State
             let lastTapTime = 0;
             let lastTapPos = { x: 0, y: 0 };
-            let isDragCandidate = false;
             let isDragging = false;
             let dragStartPos = { x: 0, y: 0 };
+            let hasShownDragIndicator = false;
 
             // Scroll / Zoom State
             let gestureMode = null; // 'scroll' | 'zoom' | 'swipe' | null
@@ -620,22 +620,17 @@
                 if (e.touches.length === 1) {
                     const touch = e.touches[0];
                     const now = Date.now();
-                    const dist = Math.sqrt(
-                        Math.pow(touch.clientX - lastTapPos.x, 2) +
-                        Math.pow(touch.clientY - lastTapPos.y, 2)
-                    );
-                    if (now - lastTapTime < 300 && dist < 20) {
-                        isDragCandidate = true;
-                        dragStartPos = { x: touch.clientX, y: touch.clientY };
-                    } else {
-                        isDragCandidate = false;
+                    const dist = Math.hypot(touch.clientX - lastTapPos.x, touch.clientY - lastTapPos.y);
+                    if (now - lastTapTime < 300 && dist < 40) {
+                        isDragging = true;
+                        hasShownDragIndicator = false;
+                        sendPayload({ action: "DRAGSTART" });
                     }
                 } else {
                     if (isDragging) {
                         sendPayload({ action: "DRAGEND" });
                         isDragging = false;
                     }
-                    isDragCandidate = false;
                 }
 
                 // 2-Fingers Scroll / Zoom Start
@@ -709,19 +704,12 @@
                         const dy = touch.clientY - prev.y;
                         if (dx !== 0 || dy !== 0) {
                             if (isDragging) {
-                                sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
-                            } else if (isDragCandidate) {
-                                const dragDist = Math.hypot(touch.clientX - dragStartPos.x, touch.clientY - dragStartPos.y);
-                                // Threshold reduced to 5px for more responsive drag initiation
-                                if (dragDist > 5) {
-                                    isDragging = true;
-                                    sendPayload({ action: "DRAGSTART" });
+                                if (!hasShownDragIndicator) {
                                     showIndicator("Drag");
                                     triggerHaptic(15);
-                                    sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
+                                    hasShownDragIndicator = true;
                                 }
-                                // Within the 5px dead zone: don't send MOVE (cursor stays still
-                                // while we determine if it's a drag or a double-tap)
+                                sendPayload({ action: "DRAGMOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                             } else {
                                 sendPayload({ action: "MOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
                             }
@@ -814,31 +802,15 @@
 
                 if (isDragging) {
                     sendPayload({ action: "DRAGEND" });
-                    isDragging = false;
-                    isDragCandidate = false;
-                    lastTapTime = 0; // Evitar double tap involuntario tras soltar arrastre
-                }
-                else if (isDragCandidate && !isDragging && e.touches.length === 0) {
-                    // The second touch was detected as a drag candidate (within 300ms
-                    // of the first tap) but drag never activated (didn't move > 5px).
-                    // Differentiate by how long the second touch was held:
-                    //  - Brief hold (< 150ms): genuine double-tap → send click (= double-click)
-                    //  - Longer hold (>= 150ms): failed drag attempt → suppress click
-                    isDragCandidate = false;
-                    const DOUBLE_TAP_MAX_HOLD = 150;
-                    if (duration < DOUBLE_TAP_MAX_HOLD && wasTap) {
+                    if (wasTap) {
                         for (let i = 0; i < e.changedTouches.length; i++) {
                             createRipple(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
                         }
-                        triggerHaptic(15);
                         showIndicator("Double Click");
-                        sendPayload({ action: "CLICK", button: "LEFT" });
-                        lastTapTime = 0;
-                    } else {
-                        // User held too long for a double-tap but didn't move enough for drag.
-                        // Suppress click to avoid accidental double-clicks.
-                        lastTapTime = 0;
+                        triggerHaptic(15);
                     }
+                    isDragging = false;
+                    lastTapTime = 0; // Evitar double tap involuntario tras soltar arrastre
                 }
                 else if (wasTap) {
                     // Visual feedback
