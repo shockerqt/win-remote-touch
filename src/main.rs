@@ -14,7 +14,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_WHEEL,
 };
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(tag = "action")]
 enum TouchpadEvent {
     MOVE { dx: f32, dy: f32 },
@@ -100,5 +100,48 @@ fn process_event(event: &TouchpadEvent) {
                 SendInput(2, inputs.as_ptr(), size_of::<INPUT>() as i32);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_move() {
+        let json = r#"{"action": "MOVE", "dx": 15.5, "dy": -3.2}"#;
+        let event: TouchpadEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(event, TouchpadEvent::MOVE { dx: 15.5, dy: -3.2 });
+    }
+
+    #[test]
+    fn test_parse_scroll() {
+        let json = r#"{"action": "SCROLL", "dx": 0, "dy": 20.0}"#; // frontend still sends dx though ignored
+        let event: TouchpadEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(event, TouchpadEvent::SCROLL { dy: 20.0 });
+    }
+
+    #[test]
+    fn test_parse_click_left() {
+        let json = r#"{"action": "CLICK", "button": "LEFT"}"#;
+        let event: TouchpadEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            event,
+            TouchpadEvent::CLICK {
+                button: "LEFT".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_click_right() {
+        let json = r#"{"action": "CLICK", "button": "RIGHT"}"#;
+        let event: TouchpadEvent = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            event,
+            TouchpadEvent::CLICK {
+                button: "RIGHT".to_string()
+            }
+        );
     }
 }
