@@ -9,13 +9,13 @@ use std::mem::zeroed;
 use tokio::net::TcpListener;
 use windows_sys::Win32::Foundation::{POINT, RECT};
 use windows_sys::Win32::UI::Input::Pointer::{
-    InitializeTouchInjection, InjectTouchInput, POINTER_INFO, POINTER_TOUCH_INFO,
-    POINTER_FLAG_DOWN, POINTER_FLAG_INCONTACT, POINTER_FLAG_INRANGE, POINTER_FLAG_UP, POINTER_FLAG_UPDATE,
+    InitializeTouchInjection, InjectTouchInput, POINTER_FLAG_DOWN, POINTER_FLAG_INCONTACT,
+    POINTER_FLAG_INRANGE, POINTER_FLAG_UP, POINTER_FLAG_UPDATE, POINTER_INFO, POINTER_TOUCH_INFO,
     TOUCH_FEEDBACK_DEFAULT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN,
-    PT_TOUCH, TOUCH_FLAG_NONE, TOUCH_MASK_CONTACTAREA, TOUCH_MASK_PRESSURE,
+    GetSystemMetrics, PT_TOUCH, SM_CXSCREEN, SM_CYSCREEN, TOUCH_FLAG_NONE, TOUCH_MASK_CONTACTAREA,
+    TOUCH_MASK_PRESSURE,
 };
 
 #[derive(Deserialize, Debug)]
@@ -72,7 +72,7 @@ fn inject_touch_event(event: &TouchEvent) {
         let mut pointer_info: POINTER_INFO = zeroed();
         pointer_info.pointerType = PT_TOUCH;
         pointer_info.pointerId = event.id;
-        
+
         // Fase 4: Escalado desde coordenadas relativas a la resolución real de la pantalla
         let screen_width = GetSystemMetrics(SM_CXSCREEN) as f32;
         let screen_height = GetSystemMetrics(SM_CYSCREEN) as f32;
@@ -80,7 +80,10 @@ fn inject_touch_event(event: &TouchEvent) {
         let mapped_x = (event.x * screen_width) as i32;
         let mapped_y = (event.y * screen_height) as i32;
 
-        pointer_info.ptPixelLocation = POINT { x: mapped_x, y: mapped_y };
+        pointer_info.ptPixelLocation = POINT {
+            x: mapped_x,
+            y: mapped_y,
+        };
 
         let flags = match event.action.as_str() {
             "DOWN" => POINTER_FLAG_DOWN | POINTER_FLAG_INRANGE | POINTER_FLAG_INCONTACT,
@@ -94,10 +97,15 @@ fn inject_touch_event(event: &TouchEvent) {
         touch_info.pointerInfo = pointer_info;
         touch_info.touchFlags = TOUCH_FLAG_NONE;
         touch_info.touchMask = TOUCH_MASK_CONTACTAREA | TOUCH_MASK_PRESSURE;
-        
+
         let cx = mapped_x;
         let cy = mapped_y;
-        touch_info.rcContact = RECT { left: cx - 10, top: cy - 10, right: cx + 10, bottom: cy + 10 };
+        touch_info.rcContact = RECT {
+            left: cx - 10,
+            top: cy - 10,
+            right: cx + 10,
+            bottom: cy + 10,
+        };
         touch_info.pressure = 1024;
 
         InjectTouchInput(1, &touch_info);
