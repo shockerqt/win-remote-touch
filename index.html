@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Remote Touch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-1: #0f172a;
+            --bg-gradient-2: #020617;
+            --primary: #6366f1;
+            --text-muted: #94a3b8;
+            --status-yellow: #eab308;
+            --status-green: #22c55e;
+            --status-red: #ef4444;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+            font-family: 'Inter', system-ui, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        #touch-area {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        #status-container {
+            position: absolute;
+            top: env(safe-area-inset-top, 24px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            pointer-events: none;
+            margin-top: 24px;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 9999px;
+            padding: 10px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .status::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--status-yellow);
+            box-shadow: 0 0 12px var(--status-yellow);
+            transition: all 0.4s ease;
+        }
+
+        .status.connected { color: #f8fafc; }
+        .status.connected::before {
+            background: var(--status-green);
+            box-shadow: 0 0 12px var(--status-green);
+        }
+
+        .status.disconnected { color: #f8fafc; }
+        .status.disconnected::before {
+            background: var(--status-red);
+            box-shadow: 0 0 12px var(--status-red);
+        }
+
+        .title-container {
+            position: absolute;
+            bottom: env(safe-area-inset-bottom, 40px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 5;
+            margin-bottom: 40px;
+        }
+
+        .title {
+            color: rgba(255, 255, 255, 0.15);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.08);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .ripple {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            margin-left: -40px;
+            margin-top: -40px;
+            background: radial-gradient(circle, rgba(99,102,241,0.6) 0%, rgba(99,102,241,0) 70%);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple-anim 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-anim {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+        
+        /* Grid background for technical feel */
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-overlay"></div>
+    
+    <div id="status-container">
+        <div id="status" class="status">Connecting...</div>
+    </div>
+
+    <div class="title-container">
+        <div class="title">Remote Touch</div>
+        <div class="subtitle">TAP OR SWIPE TO CONTROL</div>
+    </div>
+
+    <div id="touch-area"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusBadge = document.getElementById('status');
+            const touchArea = document.getElementById('touch-area');
+            
+            // Initialize WebSocket
+            let ws;
+            function connect() {
+                ws = new WebSocket(`ws://${location.host}/ws`);
+
+                ws.onopen = () => {
+                    statusBadge.textContent = 'Connected';
+                    statusBadge.className = 'status connected';
+                };
+
+                ws.onclose = () => {
+                    statusBadge.textContent = 'Disconnected';
+                    statusBadge.className = 'status disconnected';
+                    // Attempt to reconnect after 2 seconds
+                    setTimeout(connect, 2000);
+                };
+
+                ws.onerror = (err) => {
+                    console.error('WebSocket Error:', err);
+                    ws.close();
+                };
+            }
+            
+            connect();
+
+            function createRipple(x, y) {
+                const ripple = document.createElement('div');
+                ripple.className = 'ripple';
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                document.body.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 800);
+            }
+
+            function sendTouch(action, e) {
+                e.preventDefault();
+                
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    
+                    if (action === 'DOWN') {
+                        createRipple(touch.clientX, touch.clientY);
+                    }
+                    
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const payload = {
+                            id: touch.identifier,
+                            x: touch.clientX / window.innerWidth,
+                            y: touch.clientY / window.innerHeight,
+                            action: action
+                        };
+                        ws.send(JSON.stringify(payload));
+                    }
+                }
+            }
+
+            // Passive must be false to allow preventDefault
+            const options = { passive: false };
+            
+            touchArea.addEventListener('touchstart', (e) => sendTouch('DOWN', e), options);
+            touchArea.addEventListener('touchmove', (e) => sendTouch('MOVE', e), options);
+            touchArea.addEventListener('touchend', (e) => sendTouch('UP', e), options);
+            touchArea.addEventListener('touchcancel', (e) => sendTouch('UP', e), options);
+        });
+    </script>
+</body>
+</html>
