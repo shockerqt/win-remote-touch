@@ -100,6 +100,7 @@
             pointer-events: none;
             z-index: 5;
             margin-bottom: 40px;
+            width: 90%;
         }
 
         .title {
@@ -108,6 +109,7 @@
             font-weight: 700;
             letter-spacing: 4px;
             text-transform: uppercase;
+            text-align: center;
         }
 
         .subtitle {
@@ -116,7 +118,7 @@
             font-weight: 500;
             letter-spacing: 1px;
             text-align: center;
-            line-height: 1.6;
+            line-height: 1.8;
         }
 
         .grid-overlay {
@@ -161,6 +163,153 @@
             z-index: 20;
             white-space: pre-wrap;
         }
+
+        /* Settings Gear Button */
+        .settings-btn {
+            position: absolute;
+            top: env(safe-area-inset-top, 24px);
+            right: 24px;
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            outline: none;
+        }
+        .settings-btn:hover, .settings-btn:active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            width: 90%;
+            max-width: 380px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 24px;
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        .settings-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .settings-header h2 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+            outline: none;
+        }
+        .close-btn:hover {
+            color: #fff;
+        }
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .setting-label span:last-child {
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .setting-group input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            margin: 10px 0;
+        }
+        .setting-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+            transition: transform 0.1s;
+        }
+        .setting-group input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+        }
+
+        /* Gesture Floating Indicator */
+        .gesture-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px 24px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .gesture-indicator.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
     </style>
 </head>
 <body>
@@ -170,12 +319,56 @@
         <div id="status" class="status">Connecting...</div>
     </div>
 
+    <button id="settings-btn" class="settings-btn" aria-label="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+
+    <div id="settings-panel" class="settings-panel">
+        <div class="settings-header">
+            <h2>Settings</h2>
+            <button id="close-settings-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="settings-body">
+            <div class="setting-group">
+                <div class="setting-label">
+                    <span>Cursor Speed</span>
+                    <span id="cursor-speed-val">1.0x</span>
+                </div>
+                <input type="range" id="cursor-speed-slider" min="0.5" max="3.0" step="0.1" value="1.0">
+            </div>
+            <div class="setting-group">
+                <div class="setting-label">
+                    <span>Scroll Speed</span>
+                    <span id="scroll-speed-val">1.0x</span>
+                </div>
+                <input type="range" id="scroll-speed-slider" min="0.5" max="3.0" step="0.1" value="1.0">
+            </div>
+            <div class="setting-group">
+                <div class="setting-label">
+                    <span>Tap Deadzone</span>
+                    <span id="tap-deadzone-val">15px</span>
+                </div>
+                <input type="range" id="tap-deadzone-slider" min="5" max="30" step="1" value="15">
+            </div>
+            <div class="setting-group">
+                <div class="setting-label">
+                    <span>Max Tap Duration</span>
+                    <span id="tap-duration-val">350ms</span>
+                </div>
+                <input type="range" id="tap-duration-slider" min="200" max="500" step="10" value="350">
+            </div>
+        </div>
+    </div>
+
+    <div id="gesture-indicator" class="gesture-indicator">Click</div>
+
     <div class="title-container">
         <div class="title">Touchpad</div>
         <div class="subtitle">
-            1 Finger: Move &middot; Tap: Left Click<br>
-            2 Fingers: Scroll &middot; Tap: Right Click<br>
-            3 Fingers: Tap: Middle Click
+            1 Finger: Move &middot; Tap: Left Click &middot; Double-Tap & Hold: Drag<br>
+            2 Fingers: Scroll &middot; Pinch: Zoom &middot; Tap: Right Click<br>
+            3 Fingers: Swipe: Navigate &middot; Tap: Middle Click<br>
+            4 Fingers: Long Press: Settings
         </div>
     </div>
 
@@ -193,12 +386,50 @@
                 debugLog.textContent = `[${new Date().toISOString().split('T')[1].slice(0,-1)}] ${action}\n${details}`;
             }
 
+            // Settings persistence & state
+            let cursorSpeed = parseFloat(localStorage.getItem('cursorSpeed')) || 1.0;
+            let scrollSpeed = parseFloat(localStorage.getItem('scrollSpeed')) || 1.0;
+            let tapDeadzone = parseInt(localStorage.getItem('tapDeadzone')) || 15;
+            let tapDuration = parseInt(localStorage.getItem('tapDuration')) || 350;
+
+            // DOM elements
+            const settingsBtn = document.getElementById('settings-btn');
+            const closeSettingsBtn = document.getElementById('close-settings-btn');
+            const settingsPanel = document.getElementById('settings-panel');
+            
+            const cursorSpeedSlider = document.getElementById('cursor-speed-slider');
+            const scrollSpeedSlider = document.getElementById('scroll-speed-slider');
+            const tapDeadzoneSlider = document.getElementById('tap-deadzone-slider');
+            const tapDurationSlider = document.getElementById('tap-duration-slider');
+            
+            const cursorSpeedVal = document.getElementById('cursor-speed-val');
+            const scrollSpeedVal = document.getElementById('scroll-speed-val');
+            const tapDeadzoneVal = document.getElementById('tap-deadzone-val');
+            const tapDurationVal = document.getElementById('tap-duration-val');
+
+            const indicator = document.getElementById('gesture-indicator');
+            let indicatorTimeout = null;
+
+            // Set initial slider values and text
+            cursorSpeedSlider.value = cursorSpeed;
+            cursorSpeedVal.textContent = `${cursorSpeed.toFixed(1)}x`;
+            
+            scrollSpeedSlider.value = scrollSpeed;
+            scrollSpeedVal.textContent = `${scrollSpeed.toFixed(1)}x`;
+            
+            tapDeadzoneSlider.value = tapDeadzone;
+            tapDeadzoneVal.textContent = `${tapDeadzone}px`;
+            
+            tapDurationSlider.value = tapDuration;
+            tapDurationVal.textContent = `${tapDuration}ms`;
+
             let ws;
             function connect() {
                 ws = new WebSocket(`ws://${location.host}/ws`);
                 ws.onopen = () => {
                     statusBadge.textContent = 'Connected';
                     statusBadge.className = 'status connected';
+                    sendConfig();
                 };
                 ws.onclose = () => {
                     statusBadge.textContent = 'Disconnected';
@@ -218,6 +449,70 @@
                     logDebug(payload.action, JSON.stringify(payload));
                 }
             }
+
+            function sendConfig() {
+                sendPayload({
+                    action: "CONFIGURE",
+                    cursor_speed: cursorSpeed,
+                    scroll_speed: scrollSpeed
+                });
+            }
+
+            cursorSpeedSlider.addEventListener('input', (e) => {
+                cursorSpeed = parseFloat(e.target.value);
+                cursorSpeedVal.textContent = `${cursorSpeed.toFixed(1)}x`;
+                localStorage.setItem('cursorSpeed', cursorSpeed);
+                sendConfig();
+            });
+
+            scrollSpeedSlider.addEventListener('input', (e) => {
+                scrollSpeed = parseFloat(e.target.value);
+                scrollSpeedVal.textContent = `${scrollSpeed.toFixed(1)}x`;
+                localStorage.setItem('scrollSpeed', scrollSpeed);
+                sendConfig();
+            });
+
+            tapDeadzoneSlider.addEventListener('input', (e) => {
+                tapDeadzone = parseInt(e.target.value);
+                tapDeadzoneVal.textContent = `${tapDeadzone}px`;
+                localStorage.setItem('tapDeadzone', tapDeadzone);
+            });
+
+            tapDurationSlider.addEventListener('input', (e) => {
+                tapDuration = parseInt(e.target.value);
+                tapDurationVal.textContent = `${tapDuration}ms`;
+                localStorage.setItem('tapDuration', tapDuration);
+            });
+
+            function openSettings() {
+                settingsPanel.classList.add('active');
+            }
+
+            function closeSettings() {
+                settingsPanel.classList.remove('active');
+            }
+
+            settingsBtn.addEventListener('click', openSettings);
+            closeSettingsBtn.addEventListener('click', closeSettings);
+            
+            function showIndicator(name) {
+                indicator.textContent = name;
+                indicator.classList.add('show');
+                if (indicatorTimeout) clearTimeout(indicatorTimeout);
+                indicatorTimeout = setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 800);
+            }
+
+            function triggerHaptic(pattern = 15) {
+                if (navigator.vibrate) {
+                    try {
+                        navigator.vibrate(pattern);
+                    } catch (e) {
+                        console.warn('Vibration failed', e);
+                    }
+                }
+            }
             
             function createRipple(x, y) {
                 const ripple = document.createElement('div');
@@ -228,19 +523,89 @@
                 setTimeout(() => ripple.remove(), 400);
             }
 
-            // Tracking state
+            // Gesture Tracking state
             let previousTouches = {};
             let touchStartTime = 0;
             let touchStartPos = { x: 0, y: 0 };
             let maxMoveDistance = 0;
             let maxFingers = 0;
 
+            // Drag State
+            let lastTapTime = 0;
+            let lastTapPos = { x: 0, y: 0 };
+            let isDragCandidate = false;
+            let isDragging = false;
+
+            // Scroll / Zoom State
+            let gestureMode = null; // 'scroll' | 'zoom' | 'swipe' | null
+            let startDistance = 0;
+            let lastDistance = 0;
+
+            // 3-Finger Swipe State
+            let startSwipePos = { x: 0, y: 0 };
+
+            // Inertial scroll State
+            let scrollVelocityX = 0;
+            let scrollVelocityY = 0;
+            let lastScrollTime = 0;
+            let inertiaAnimationFrame = null;
+
+            // 4-Finger long press state
+            let fourFingerTimer = null;
+
+            function startInertia() {
+                if (inertiaAnimationFrame) cancelAnimationFrame(inertiaAnimationFrame);
+                
+                let lastTime = Date.now();
+                const friction = 0.95; // exponential decay factor per frame (~16ms)
+                
+                function loop() {
+                    const now = Date.now();
+                    const dt = now - lastTime;
+                    lastTime = now;
+                    
+                    const cappedDt = Math.min(dt, 50);
+                    const decay = Math.pow(friction, cappedDt / 16.67);
+                    
+                    scrollVelocityX *= decay;
+                    scrollVelocityY *= decay;
+                    
+                    const currentSpeed = Math.hypot(scrollVelocityX, scrollVelocityY);
+                    if (currentSpeed < 0.05) {
+                        scrollVelocityX = 0;
+                        scrollVelocityY = 0;
+                        inertiaAnimationFrame = null;
+                        return;
+                    }
+                    
+                    const dx = scrollVelocityX * cappedDt;
+                    const dy = scrollVelocityY * cappedDt;
+                    
+                    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                        sendPayload({ action: "SCROLL", dx: dx, dy: dy, ctrl: false });
+                    }
+                    
+                    inertiaAnimationFrame = requestAnimationFrame(loop);
+                }
+                
+                inertiaAnimationFrame = requestAnimationFrame(loop);
+            }
+
             touchArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 touchStartTime = Date.now();
                 maxMoveDistance = 0;
                 maxFingers = Math.max(maxFingers, e.touches.length);
-                
+
+                // Stop any running inertia animation
+                if (inertiaAnimationFrame) {
+                    cancelAnimationFrame(inertiaAnimationFrame);
+                    inertiaAnimationFrame = null;
+                }
+                scrollVelocityX = 0;
+                scrollVelocityY = 0;
+
+                // Track initial touches
                 if (e.touches.length > 0) {
                     touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                 }
@@ -249,41 +614,177 @@
                     const touch = e.touches[i];
                     previousTouches[touch.identifier] = { x: touch.clientX, y: touch.clientY };
                 }
+
+                // 1-Finger Tap-and-Drag / Double Tap Check
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    const now = Date.now();
+                    const dist = Math.sqrt(
+                        Math.pow(touch.clientX - lastTapPos.x, 2) +
+                        Math.pow(touch.clientY - lastTapPos.y, 2)
+                    );
+                    if (now - lastTapTime < 300 && dist < 20) {
+                        isDragCandidate = true;
+                    } else {
+                        isDragCandidate = false;
+                    }
+                } else {
+                    if (isDragging) {
+                        sendPayload({ action: "DRAG_END" });
+                        isDragging = false;
+                    }
+                    isDragCandidate = false;
+                }
+
+                // 2-Fingers Scroll / Zoom Start
+                if (e.touches.length === 2) {
+                    startDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    lastDistance = startDistance;
+                    gestureMode = null; // Decided in touchmove
+                }
+
+                // 3-Fingers Swipe Start
+                if (e.touches.length === 3) {
+                    startSwipePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    gestureMode = 'swipe';
+                }
+
+                // 4-Fingers Long Press settings check
+                if (e.touches.length === 4) {
+                    if (fourFingerTimer) clearTimeout(fourFingerTimer);
+                    fourFingerTimer = setTimeout(() => {
+                        openSettings();
+                        triggerHaptic([30, 50, 30]);
+                        fourFingerTimer = null;
+                    }, 1000);
+                } else {
+                    if (fourFingerTimer) {
+                        clearTimeout(fourFingerTimer);
+                        fourFingerTimer = null;
+                    }
+                }
             }, { passive: false });
 
             touchArea.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                
+
                 if (e.touches.length > 0) {
                     let dx = e.touches[0].clientX - touchStartPos.x;
                     let dy = e.touches[0].clientY - touchStartPos.y;
                     maxMoveDistance = Math.max(maxMoveDistance, Math.sqrt(dx*dx + dy*dy));
                 }
 
+                // Cancel 4-finger timer if fingers move significantly
+                if (fourFingerTimer && e.touches.length === 4) {
+                    let movedFar = false;
+                    for (let i = 0; i < e.touches.length; i++) {
+                        const touch = e.touches[i];
+                        const prev = previousTouches[touch.identifier];
+                        if (prev) {
+                            const dx = touch.clientX - prev.x;
+                            const dy = touch.clientY - prev.y;
+                            if (Math.hypot(dx, dy) > 10) {
+                                movedFar = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (movedFar) {
+                        clearTimeout(fourFingerTimer);
+                        fourFingerTimer = null;
+                    }
+                }
+
                 if (e.touches.length === 1) {
-                    // 1 Finger: Mouse Move
+                    // 1 Finger: Mouse Move or Drag Move
                     const touch = e.touches[0];
                     const prev = previousTouches[touch.identifier];
                     if (prev) {
                         const dx = touch.clientX - prev.x;
                         const dy = touch.clientY - prev.y;
                         if (dx !== 0 || dy !== 0) {
-                            sendPayload({ action: "MOVE", dx: dx, dy: dy });
+                            if (isDragCandidate) {
+                                if (!isDragging) {
+                                    isDragging = true;
+                                    sendPayload({ action: "DRAG_START" });
+                                    showIndicator("Drag");
+                                }
+                                sendPayload({ action: "DRAG_MOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
+                            } else {
+                                sendPayload({ action: "MOVE", dx: dx * cursorSpeed, dy: dy * cursorSpeed });
+                            }
                         }
                     }
                     previousTouches[touch.identifier] = { x: touch.clientX, y: touch.clientY };
-                } 
+                }
                 else if (e.touches.length === 2) {
-                    // 2 Fingers: Scroll
-                    const touch = e.touches[0];
-                    const prev = previousTouches[touch.identifier];
-                    if (prev) {
-                        const dy = touch.clientY - prev.y;
-                        if (dy !== 0) {
-                            sendPayload({ action: "SCROLL", dy: dy });
+                    // 2 Fingers: Scroll or Pinch-to-Zoom
+                    const currentDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    
+                    if (!gestureMode) {
+                        const totalDistDiff = currentDistance - startDistance;
+                        if (Math.abs(totalDistDiff) > 20) {
+                            gestureMode = 'zoom';
+                            showIndicator("Zoom");
                         }
                     }
-                    // Update all touches
+
+                    if (gestureMode === 'zoom') {
+                        const distDiff = currentDistance - lastDistance;
+                        const zoomDelta = distDiff * 0.5;
+                        if (Math.abs(zoomDelta) > 0.1) {
+                            sendPayload({ action: "SCROLL", dx: 0.0, dy: zoomDelta, ctrl: true });
+                            showIndicator("Zoom");
+                        }
+                    } else {
+                        gestureMode = 'scroll';
+                        let dx = 0;
+                        let dy = 0;
+                        let count = 0;
+                        for (let i = 0; i < e.touches.length; i++) {
+                            const t = e.touches[i];
+                            const prev = previousTouches[t.identifier];
+                            if (prev) {
+                                dx += t.clientX - prev.x;
+                                dy += t.clientY - prev.y;
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            dx /= count;
+                            dy /= count;
+                            dx *= scrollSpeed;
+                            dy *= scrollSpeed;
+                            if (dx !== 0 || dy !== 0) {
+                                sendPayload({ action: "SCROLL", dx: dx, dy: dy, ctrl: false });
+                                showIndicator("Scroll");
+                                
+                                const now = Date.now();
+                                const dt = now - lastScrollTime;
+                                if (dt > 0) {
+                                    scrollVelocityX = dx / dt;
+                                    scrollVelocityY = dy / dt;
+                                }
+                                lastScrollTime = now;
+                            }
+                        }
+                    }
+                    lastDistance = currentDistance;
+                    
+                    // Update positions
+                    for (let i = 0; i < e.touches.length; i++) {
+                        const t = e.touches[i];
+                        previousTouches[t.identifier] = { x: t.clientX, y: t.clientY };
+                    }
+                }
+                else if (e.touches.length === 3) {
+                    // Track positions for 3 fingers
                     for (let i = 0; i < e.touches.length; i++) {
                         const t = e.touches[i];
                         previousTouches[t.identifier] = { x: t.clientX, y: t.clientY };
@@ -293,35 +794,110 @@
 
             touchArea.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                
-                // Allow up to 15px drift to still count as a tap, and max 350ms duration
+
+                if (fourFingerTimer) {
+                    clearTimeout(fourFingerTimer);
+                    fourFingerTimer = null;
+                }
+
                 const duration = Date.now() - touchStartTime;
-                if (e.touches.length === 0 && maxMoveDistance < 15 && duration < 350) {
+                const wasTap = e.touches.length === 0 && maxMoveDistance < tapDeadzone && duration < tapDuration;
+
+                if (isDragging) {
+                    sendPayload({ action: "DRAG_END" });
+                    isDragging = false;
+                    isDragCandidate = false;
+                }
+                else if (wasTap) {
                     // Visual feedback
                     for (let i = 0; i < e.changedTouches.length; i++) {
                         createRipple(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
                     }
                     
                     if (maxFingers === 1) {
-                        sendPayload({ action: "CLICK", button: "LEFT" });
+                        const now = Date.now();
+                        const dist = Math.sqrt(
+                            Math.pow(e.changedTouches[0].clientX - lastTapPos.x, 2) +
+                            Math.pow(e.changedTouches[0].clientY - lastTapPos.y, 2)
+                        );
+                        if (now - lastTapTime < 300 && dist < 20) {
+                            // Double tap
+                            triggerHaptic(15);
+                            showIndicator("Double Click");
+                            sendPayload({ action: "CLICK", button: "LEFT" });
+                            lastTapTime = 0; // reset
+                        } else {
+                            // Single tap
+                            triggerHaptic(15);
+                            showIndicator("Click");
+                            sendPayload({ action: "CLICK", button: "LEFT" });
+                            lastTapTime = now;
+                            lastTapPos = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+                        }
                     } else if (maxFingers === 2) {
+                        triggerHaptic(15);
+                        showIndicator("Right Click");
                         sendPayload({ action: "CLICK", button: "RIGHT" });
                     } else if (maxFingers === 3) {
+                        triggerHaptic(15);
+                        showIndicator("Middle Click");
                         sendPayload({ action: "CLICK", button: "MIDDLE" });
                     }
                 }
-                
+                else if (e.touches.length === 0) {
+                    // Inertial Scroll Trigger
+                    if (gestureMode === 'scroll') {
+                        const speed = Math.hypot(scrollVelocityX, scrollVelocityY);
+                        if (speed > 0.15) {
+                            startInertia();
+                        }
+                    }
+                    
+                    // 3-Finger Swipe trigger
+                    if (maxFingers === 3 && gestureMode === 'swipe') {
+                        const endX = e.changedTouches[0].clientX;
+                        const endY = e.changedTouches[0].clientY;
+                        const swipeDx = endX - startSwipePos.x;
+                        const swipeDy = endY - startSwipePos.y;
+                        const dist = Math.hypot(swipeDx, swipeDy);
+                        if (dist > 50) {
+                            let direction = "";
+                            let gestureName = "";
+                            if (Math.abs(swipeDx) > Math.abs(swipeDy)) {
+                                direction = swipeDx > 0 ? "RIGHT" : "LEFT";
+                                gestureName = swipeDx > 0 ? "Swipe Right" : "Swipe Left";
+                            } else {
+                                direction = swipeDy > 0 ? "DOWN" : "UP";
+                                gestureName = swipeDy > 0 ? "Desktop" : "Task View";
+                            }
+                            sendPayload({ action: "SWIPE", direction: direction });
+                            showIndicator(gestureName);
+                            triggerHaptic(15);
+                        }
+                    }
+                }
+
                 if (e.touches.length === 0) {
                     maxFingers = 0;
                     previousTouches = {};
+                    gestureMode = null;
                 }
             }, { passive: false });
-            
+
             touchArea.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
+                if (fourFingerTimer) {
+                    clearTimeout(fourFingerTimer);
+                    fourFingerTimer = null;
+                }
+                if (isDragging) {
+                    sendPayload({ action: "DRAG_END" });
+                    isDragging = false;
+                }
                 if (e.touches.length === 0) {
                     maxFingers = 0;
                     previousTouches = {};
+                    gestureMode = null;
                 }
             }, { passive: false });
         });
