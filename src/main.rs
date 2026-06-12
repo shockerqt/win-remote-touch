@@ -15,11 +15,11 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
 };
 
 #[derive(Deserialize, Debug, PartialEq)]
-#[serde(tag = "action")]
+#[serde(tag = "action", rename_all = "UPPERCASE")]
 enum TouchpadEvent {
-    MOVE { dx: f32, dy: f32 },
-    SCROLL { dy: f32 },
-    CLICK { button: String },
+    Move { dx: f32, dy: f32 },
+    Scroll { dy: f32 },
+    Click { button: String },
 }
 
 #[tokio::main]
@@ -58,7 +58,7 @@ async fn handle_socket(mut socket: WebSocket) {
 fn process_event(event: &TouchpadEvent) {
     unsafe {
         match event {
-            TouchpadEvent::MOVE { dx, dy } => {
+            TouchpadEvent::Move { dx, dy } => {
                 let mut input: INPUT = zeroed();
                 input.r#type = INPUT_MOUSE;
 
@@ -70,7 +70,7 @@ fn process_event(event: &TouchpadEvent) {
 
                 SendInput(1, &input, size_of::<INPUT>() as i32);
             }
-            TouchpadEvent::SCROLL { dy } => {
+            TouchpadEvent::Scroll { dy } => {
                 let mut input: INPUT = zeroed();
                 input.r#type = INPUT_MOUSE;
 
@@ -82,7 +82,7 @@ fn process_event(event: &TouchpadEvent) {
 
                 SendInput(1, &input, size_of::<INPUT>() as i32);
             }
-            TouchpadEvent::CLICK { button } => {
+            TouchpadEvent::Click { button } => {
                 let (down, up) = match button.as_str() {
                     "LEFT" => (MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP),
                     "RIGHT" => (MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP),
@@ -112,14 +112,14 @@ mod tests {
     fn test_parse_move() {
         let json = r#"{"action": "MOVE", "dx": 15.5, "dy": -3.2}"#;
         let event: TouchpadEvent = serde_json::from_str(json).unwrap();
-        assert_eq!(event, TouchpadEvent::MOVE { dx: 15.5, dy: -3.2 });
+        assert_eq!(event, TouchpadEvent::Move { dx: 15.5, dy: -3.2 });
     }
 
     #[test]
     fn test_parse_scroll() {
         let json = r#"{"action": "SCROLL", "dx": 0, "dy": 20.0}"#; // frontend still sends dx though ignored
         let event: TouchpadEvent = serde_json::from_str(json).unwrap();
-        assert_eq!(event, TouchpadEvent::SCROLL { dy: 20.0 });
+        assert_eq!(event, TouchpadEvent::Scroll { dy: 20.0 });
     }
 
     #[test]
