@@ -47,9 +47,8 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn index_handler() -> Html<String> {
-    let html = std::fs::read_to_string("index.html")
-        .unwrap_or_else(|_| "<h1>Error: index.html no encontrado</h1><p>El subagente frontend probablemente aún está trabajando en ello.</p>".to_string());
+async fn index_handler() -> Html<&'static str> {
+    let html = include_str!("../index.html");
     Html(html)
 }
 
