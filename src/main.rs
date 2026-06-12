@@ -128,7 +128,7 @@ mod tests {
         let event: TouchpadEvent = serde_json::from_str(json).unwrap();
         assert_eq!(
             event,
-            TouchpadEvent::CLICK {
+            TouchpadEvent::Click {
                 button: "LEFT".to_string()
             }
         );
@@ -140,7 +140,7 @@ mod tests {
         let event: TouchpadEvent = serde_json::from_str(json).unwrap();
         assert_eq!(
             event,
-            TouchpadEvent::CLICK {
+            TouchpadEvent::Click {
                 button: "RIGHT".to_string()
             }
         );
